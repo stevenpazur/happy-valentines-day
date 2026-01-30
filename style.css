@@ -1,0 +1,63 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #050508;
+  font-family: 'Georgia', serif;
+  color: #eee;
+}
+
+canvas {
+  display: block;
+}
+
+/* Memory Overlay */
+#memoryOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 8, 0.2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  backdrop-filter: blur(6px);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.memory-content {
+  max-width: 420px;
+  text-align: center;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(5, 5, 8, 0.85);
+  margin: 2rem;
+}
+
+.memory-content h2 {
+  font-weight: normal;
+  margin-bottom: 1rem;
+}
+
+.memory-content p {
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+.memory-content button {
+  margin-top: 1.5rem;
+  background: none;
+  border: 1px solid #aaa;
+  color: #eee;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+}
+
+.memory-content button:hover {
+  border-color: white;
+}
+
+#memoryText .left {
+    text-align: left;
+}

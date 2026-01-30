@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>For My Shadow Queen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <!-- Memory Overlay -->
+  <div id="memoryOverlay" class="hidden">
+    <div class="memory-content">
+      <h2 id="memoryTitle"></h2>
+      <p id="memoryText"></p>
+      <button id="closeMemory">Close</button>
+      <button id="nextMemory">Next Memory</button>
+    </div>
+  </div>
+
+  <!-- Three.js Module Imports -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://esm.sh/three@0.160.0",
+      "three/addons/": "https://esm.sh/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
