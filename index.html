@@ -8,14 +8,31 @@
 </head>
 <body>
   <canvas id="scene"></canvas>
+  <div id="centerText" class="center-text hidden"></div>
+  <div id="centerText2" class="center-text-2 hidden"></div>
+  <!-- <div id="starLock" class="star-lock hidden">🔒</div> -->
+   <div id="centerStarTooltip" class="center-star-tooltip hidden">
+    For your eyes only 😉
+  </div>
+
+  <div id="startOverlay" class="start-overlay">
+    <div class="start-content">
+      <div class="start-title">Touch the stars ✨</div>
+      <div class="start-subtitle">
+        Tap anywhere to begin
+      </div>
+    </div>
+  </div>
 
   <!-- Memory Overlay -->
   <div id="memoryOverlay" class="hidden">
     <div class="memory-content">
       <h2 id="memoryTitle"></h2>
       <p id="memoryText"></p>
-      <button id="closeMemory">Close</button>
-      <button id="nextMemory">Next Memory</button>
+      <div class="memory-buttons">
+        <button id="closeMemory">Close</button>
+        <button id="nextMemory">Next Memory</button>
+      </div>
     </div>
   </div>
 

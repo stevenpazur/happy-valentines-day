@@ -3,6 +3,537 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
+let started = false;
+const startOverlay = document.getElementById('startOverlay');
+
+let hoveredCenterStar = false;
+const centerStarTooltip = document.getElementById('centerStarTooltip');
+
+let prevMouse = new THREE.Vector2();
+
+const phantomMemoryTitle = "The One Still Being Written";
+const phantomMemoryText = `All these memories already shine so brightly…<br>
+but the one that matters most hasn't happened yet.<br><br>
+
+Every laugh we haven't shared,<br>
+every game we haven't played,<br>
+every tomorrow we'll discover together.<br><br>
+
+This star is our future —<br>
+and I can't wait to keep creating it with you.`;
+
+const bgm = new Audio('assets/constellation-love.mp3');
+bgm.loop = true;
+bgm.volume = 0.12;
+
+const shimmer = new Audio('assets/shimmer.mp3');
+shimmer.loop = false;
+shimmer.volume = 0.2;
+
+let audioCtx;
+// let shimmerBuffer;
+let shimmerBuffers = [];
+let lastShimmerTime = 0;
+const SHIMMER_COOLDOWN = 120; // ms (tweak 80–200)
+
+function updateLockStardusts(delta) {
+  for (let i = lockStardusts.length - 1; i >= 0; i--) {
+    const emitter = lockStardusts[i];
+    const { points, velocities } = emitter;
+    const positions = points.geometry.attributes.position;
+
+    emitter.age += delta;
+
+    for (let j = 0; j < positions.count; j++) {
+      positions.array[j * 3]     += velocities[j].x * delta;
+      positions.array[j * 3 + 1] += velocities[j].y * delta;
+      positions.array[j * 3 + 2] += velocities[j].z * delta;
+
+      const swirlStrength = 0.6;
+
+      const vx = velocities[j].x;
+      const vz = velocities[j].z;
+
+      // Rotate velocity slightly around Y-axis
+      velocities[j].x = vx * Math.cos(swirlStrength * delta) - vz * Math.sin(swirlStrength * delta);
+      velocities[j].z = vx * Math.sin(swirlStrength * delta) + vz * Math.cos(swirlStrength * delta);
+
+      // slowly reduce velocity to simulate fizzle
+      // velocities[j].multiplyScalar(0.5);
+    }
+
+    // Only fade when told to
+    if (emitter.fading) {
+      points.material.opacity -= delta * 0.6;   // fade speed
+    }
+
+    positions.needsUpdate = true;
+
+    // Cleanup
+    if (points.material.opacity <= 0) {
+      scene.remove(points);
+      lockStardusts.splice(i, 1);
+    }
+  }
+
+  setTimeout(() => {
+    fadeLockStardust();
+  }, 2000);
+}
+
+function fadeLockStardust() {
+  console.log('its working, theyre fading');
+  lockStardusts.forEach(e => e.fading = true);
+}
+
+function hoverCenterStar() {
+  // Show the tooltip
+  if (!clickedCenterStar) {
+    centerStarTooltip.classList.add('visible');
+  }
+  centerStarTooltip.classList.remove('hidden');
+
+  // Optional: make star "pop" when hovered
+  if (centerStar) {
+    centerStar.scale.set(1.2, 1.2, 1.2); // slightly bigger
+  }
+  if (lockSprite) {
+    lockSprite.scale.set(1.2, 1.2, 1.2);
+  }
+
+  document.body.style.cursor = 'pointer';
+}
+
+function unhoverCenterStar() {
+  // Hide the tooltip
+  centerStarTooltip.classList.remove('visible');
+  centerStarTooltip.classList.add('hidden');
+
+  // Reset star scale
+  if (centerStar) {
+    centerStar.scale.set(1, 1, 1);
+  }
+  if (lockSprite) {
+    lockSprite.scale.set(1, 1, 1);
+  }
+
+  document.body.style.cursor = 'default';
+}
+
+const lockStardusts = [];
+
+function onCenterStarClicked() {
+  if (!centerStar || !lockSprite) return;
+
+  fizzleLockIntoStardust(lockSprite, lockStardusts, 60);
+
+  setTimeout(() => {
+    showCenterMessage(
+      "Happy Valentine's Day, Lin ❤️",
+      centerText,
+      { fadeIn: 3000 }
+    );
+  }, 1200);
+
+  setTimeout(() => {
+    showCenterMessage(
+      "You are the brightest thing in my universe.",
+      centerText2,
+      { fadeIn: 3500 }
+    );
+  }, 3000);
+}
+
+function checkCenterStarHover() {
+  if (!centerStar) return; // only if star exists
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects([centerStar, lockSprite]);
+
+  if (intersects.length > 0) {
+    if (!hoveredCenterStar) {
+      hoveredCenterStar = true;
+      hoverCenterStar();
+    }
+  } else {
+    if (hoveredCenterStar) {
+      hoveredCenterStar = false;
+      unhoverCenterStar();
+    }
+  }
+
+  // Update tooltip position if visible
+  if (hoveredCenterStar) {
+    // project star position to 2D screen coordinates
+    const vector = centerStar.position.clone();
+    vector.project(camera);
+
+    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+
+    centerStarTooltip.style.left = x + 10 + 'px'; // slight offset
+    centerStarTooltip.style.top = y + 10 + 'px';
+  }
+}
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    console.log('AudioContext created:', audioCtx.state);
+  }
+}
+
+async function loadShimmers() {
+  const files = [
+    'assets/shimmer2.mp3',
+    'assets/shimmer3.mp3'
+  ];
+
+  shimmerBuffers = await Promise.all(
+    files.map(async (url) => {
+      const res = await fetch(url);
+      const data = await res.arrayBuffer();
+      return audioCtx.decodeAudioData(data);
+    })
+  );
+
+  console.log('Shimmers loaded:', shimmerBuffers.length);
+}
+
+function playShimmer() {
+  if (!shimmerBuffers.length || audioCtx.state !== 'running') return;
+
+  const now = performance.now();
+  if (now - lastShimmerTime < SHIMMER_COOLDOWN) return;
+
+  lastShimmerTime = now;
+
+  const buffer =
+    shimmerBuffers[Math.floor(Math.random() * shimmerBuffers.length)];
+
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.12;
+
+  // subtle variation every time
+  source.playbackRate.value = 0.9 + Math.random() * 0.2;
+
+  source.connect(gain).connect(audioCtx.destination);
+  source.start();
+}
+
+startOverlay.addEventListener('pointerdown', async () => {
+  startOverlay.classList.add('hidden');
+
+  // Fully remove after fade
+  setTimeout(() => {
+    startOverlay.remove();
+  }, 1500);
+
+  enterTheStars();
+}, { once: true });
+
+let musicStarted = false;
+
+function playMusicIfNeeded() {
+  if (!musicStarted) {
+    bgm.currentTime = 15.0;
+    bgm.play().catch(() => {});
+    musicStarted = true;
+  }
+}
+
+function focusOnStar(star, duration = 1200, pause = 800) {
+  // Save original look direction
+  const originalTarget = new THREE.Vector3();
+  camera.getWorldDirection(originalTarget);
+  originalTarget.multiplyScalar(10).add(camera.position);
+
+  const starTarget = star.position.clone();
+
+  // Animate camera to phantom star
+  function animateToStar(timeStart) {
+    const animate = (time) => {
+      const t = Math.min((time - timeStart) / duration, 1);
+      const ease = t * t * (3 - 2 * t); // smoothstep
+
+      const currentTarget = originalTarget.clone().lerp(starTarget, ease);
+      camera.lookAt(currentTarget);
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Pause briefly before returning
+        setTimeout(() => animateBack(performance.now()), pause);
+      }
+    };
+    requestAnimationFrame(animate);
+  }
+
+  // Animate camera back to original target
+  function animateBack(timeStart) {
+    const animate = (time) => {
+      const t = Math.min((time - timeStart) / duration, 1);
+      const ease = t * t * (3 - 2 * t); // smoothstep
+
+      const currentTarget = starTarget.clone().lerp(originalTarget, ease);
+      camera.lookAt(currentTarget);
+
+      if (t < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  }
+
+  animateToStar(performance.now());
+}
+
+function onLastMemoryClosed() {
+    revealPhantomMemory();
+}
+
+let playStars = false;
+function animateCore(core, speed = 1) {
+    if (!started) return;
+    if (!playStars) {
+      shimmer.play().catch(() => {});
+      playStars = true;
+    }
+    const total = core.userData.totalPoints;
+    const current = core.userData.currentDraw || 0;
+    
+    const next = Math.min(current + speed, total); // increment
+    core.geometry.setDrawRange(0, next);
+
+    core.userData.currentDraw = next;
+}
+
+let phantomRevealed = false;
+// -------------------------
+// Phantom Memory Reveal
+// -------------------------
+function revealPhantomMemory() {
+  if (phantomRevealed) return; // only once
+  phantomRevealed = true;
+  // Create the phantom star
+  const geo = new THREE.SphereGeometry(0.6, 16, 16);
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffaaff,
+    emissive: 0xff88ff,
+    emissiveIntensity: 0,
+    transparent: true,
+    opacity: 0,   // start invisible
+  });
+
+  const phantomStar = new THREE.Mesh(geo, mat);
+  phantomStar.position.copy(phantom); // use the phantom point position
+  scene.add(phantomStar);
+  focusOnStar(phantomStar);
+
+  // Animation state
+  const duration = 2000; // milliseconds
+  const startTime = performance.now();
+  const startScale = 0.1;
+  const endScale = 1.0;
+  const startOpacity = 0;
+  const endOpacity = 0.9;
+
+  function animate() {
+    const elapsed = performance.now() - startTime;
+    let t = Math.min(elapsed / duration, 1); // 0 -> 1
+
+    // Ease out cubic for smooth slow reveal
+    const ease = (--t) * t * t + 1;
+
+    phantomStar.scale.setScalar(startScale + (endScale - startScale) * ease);
+    phantomStar.material.opacity = startOpacity + (endOpacity - startOpacity) * ease;
+    phantomStar.material.emissiveIntensity = 1 + 2 * ease;
+
+    if (elapsed < duration) {
+      requestAnimationFrame(animate);
+    } else {
+      // Optional: add a gentle twinkle after fully revealed
+      twinklePhantom(phantomStar);
+    }
+  }
+
+  memoryStars.push(hiddenStar); // add to memory stars for interaction
+  updateProximity();
+
+  animate();
+}
+
+// function restoreCameraView() {
+//   camera.position.copy(savedCameraPosition);
+//   camera.quaternion.copy(savedCameraQuaternion);
+// }
+
+function startStarPulse(star) {
+  const baseScale = 1;
+  const pulseAmount = 0.08;
+  const speed = 0.0015;
+
+  let start = performance.now();
+
+  function pulse(time) {
+    const t = (time - start) * speed;
+    const scale = baseScale + Math.sin(t) * pulseAmount;
+
+    star.scale.setScalar(scale);
+    requestAnimationFrame(pulse);
+  }
+
+  requestAnimationFrame(pulse);
+}
+
+function animateStarIn(star, {
+  delay = 0,
+  duration = 1600,
+  pulse = true
+} = {}) {
+  if (!star) return;
+
+  star.visible = true;
+
+  // Initial state
+  const startScale = 0.05;
+  const endScale = 1.0;
+  const startOpacity = 0;
+  const endOpacity = 1;
+
+  star.scale.setScalar(startScale);
+  star.material.opacity = startOpacity;
+
+  const startTime = performance.now() + delay;
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function animate(time) {
+    if (time < startTime) {
+      requestAnimationFrame(animate);
+      return;
+    }
+
+    const t = Math.min((time - startTime) / duration, 1);
+    const ease = easeOutCubic(t);
+
+    const scale = startScale + (endScale - startScale) * ease;
+    const opacity = startOpacity + (endOpacity - startOpacity) * ease;
+
+    star.scale.setScalar(scale);
+    star.material.opacity = opacity;
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else if (pulse) {
+      startStarPulse(star);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function spawnCenterStar() {
+  centerStar.visible = true;
+  centerStar.material.opacity = 0;
+  centerStar.scale.set(0.1, 0.1, 0.1);
+
+  animateStarIn(centerStar);
+}
+
+function showCenterMessage(message, centerText, options = {}) {
+  centerText.textContent = message;
+
+  // if fadeIn is true, add the class
+  if (options.fadeIn) {
+    centerText.classList.add('fadeIn');
+  } else {
+    centerText.style.opacity = 1; // just show immediately
+  }
+
+  // remove the hidden class so it’s visible
+  centerText.classList.remove('hidden');
+
+  // auto-hide after duration if provided
+  if (options.duration) {
+    setTimeout(() => {
+      centerText.classList.remove('fadeIn');
+      centerText.classList.add('hidden');
+    }, options.duration);
+  }
+}
+
+function createLockSprite() {
+  // create a canvas to draw the emoji
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  ctx.font = "100px serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("🔒", 64, 64); // draw lock emoji
+
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  sprite.scale.set(1, 1, 1); // adjust size to fit your star
+  return sprite;
+}
+
+const lockSprite = createLockSprite();
+
+function createCenterStar() {
+  const geometry = new THREE.SphereGeometry(0.6, 32, 32);
+  const material = new THREE.MeshBasicMaterial({
+    color: 0xffd7ff,
+    transparent: true,
+    opacity: 0
+  });
+
+  centerStar = new THREE.Mesh(geometry, material);
+  centerStar.position.set(0, 0, 0);
+  centerStar.visible = false;
+  centerStar.userData.isCenterStar = true;
+
+  // usage: attach to your star
+  centerStar.add(lockSprite); // star = your star mesh or group
+  lockSprite.position.set(0, 1, 0); // adjust offset if you want it above the star
+
+  scene.add(centerStar);
+}
+
+function onPhantomMemoryClosed() {
+  // 1. Restore camera so she's not stuck staring
+  // restoreCameraView();
+
+  // 2. Give control back to Lin
+  // enableFreeNavigation(true);
+
+  // 3. Small emotional pause
+  setTimeout(() => {
+    spawnCenterStar();
+  }, 600);
+}
+
+// -------------------------
+// Gentle twinkle effect
+// -------------------------
+function twinklePhantom(star) {
+  const baseIntensity = 1.5;
+  function twinkle() {
+    const t = performance.now() * 0.002;
+    star.material.emissiveIntensity = baseIntensity + Math.sin(t * 2 * Math.PI) * 0.5;
+    requestAnimationFrame(twinkle);
+  }
+  twinkle();
+}
+
 function createAttentionPulse(position) {
   const geometry = new THREE.RingGeometry(
     1.2,   // inner radius
@@ -110,16 +641,72 @@ function createStardust(curve, count) {
     return points;
 }
 
+function interactWithStardust(particles) {
+  if (!started) return;
+  const positions = particles.geometry.attributes.position;
+  const { velocities, active } = particles.userData;
+
+  if (!mouse || isZoomedIn) return;
+
+  // Compute mouse movement delta
+  const delta = new THREE.Vector2(mouse.x - prevMouse.x, mouse.y - prevMouse.y);
+
+  // Scale the delta for effect strength
+  const strength = 0.5;
+
+  // Project mouse to 3D ray
+  raycaster.setFromCamera(mouse, camera);
+
+  for (let i = 0; i < positions.count; i++) {
+    if (!active[i]) continue; // only affect active particles
+
+    const particlePos = new THREE.Vector3(
+      positions.array[i * 3],
+      positions.array[i * 3 + 1],
+      positions.array[i * 3 + 2]
+    );
+
+    // Distance from mouse ray
+    const dist = raycaster.ray.distanceToPoint(particlePos);
+    if (dist < 1.5) { // small radius around cursor
+      // Apply small velocity in mouse movement direction
+      velocities[i].x += delta.x * strength * (Math.random() * 0.5 + 0.5);
+      velocities[i].y += delta.y * strength * (Math.random() * 0.5 + 0.5);
+
+      // Optional: play tiny shimmer for interaction
+      if (Math.abs(delta.x) > 0.01 || Math.abs(delta.y) > 0.01) {
+        playShimmer();
+      }
+    }
+  }
+
+  prevMouse.copy(mouse);
+}
+
+function getTrimmedCurve(curve, divisions = 200, trimPercent = 0.952) {
+    const pts = curve.getPoints(divisions);
+    const trimmedPts = pts.slice(0, Math.floor(pts.length * trimPercent));
+
+    return new THREE.CatmullRomCurve3(
+        trimmedPts,
+        false,
+        'catmullrom',
+        0.5
+    );
+}
+
 function addTrailAura(scene, curve) {
+    const trimmedCurve = getTrimmedCurve(curve, 200, 0.95);
 
     // ---------- INNER CORE (bright spine) ----------
     const coreGeometry = new THREE.TubeGeometry(
-        curve,
+        trimmedCurve,
         200,
         0.15,   // core thickness
         24,
         false
     );
+    coreGeometry.setDrawRange(0, 0);
 
     const coreMaterial = new THREE.ShaderMaterial({
         transparent: true,
@@ -127,7 +714,7 @@ function addTrailAura(scene, curve) {
         blending: THREE.AdditiveBlending,
         uniforms: {
             color: { value: new THREE.Color(0xffb6ff) },
-            intensity: { value: 0.6 },
+            intensity: { value: 0.9 },
         },
         vertexShader: `
             varying vec3 vNormal;
@@ -151,106 +738,137 @@ function addTrailAura(scene, curve) {
     });
 
     const core = new THREE.Mesh(coreGeometry, coreMaterial);
+    core.userData.totalPoints = coreGeometry.attributes.position.count * 30;
     scene.add(core);
 
 
-    // ---------- OUTER MIST (soft glow) ----------
-    const mistGeometry = new THREE.TubeGeometry(
-        curve,
-        200,
-        1.5,    // much thicker
-        24,
-        false
-    );
+    // // ---------- OUTER MIST (soft glow) ----------
+    // const mistGeometry = new THREE.TubeGeometry(
+    //     trimmedCurve,
+    //     200,
+    //     1.5,    // much thicker
+    //     24,
+    //     false
+    // );
 
-    const mistMaterial = new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        uniforms: {
-            color: { value: new THREE.Color(0xffc4ff) },
-            intensity: { value: 0.15 }
-        },
-        vertexShader: `
-            varying vec3 vNormal;
-            void main() {
-                vNormal = normalize(normalMatrix * normal);
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 color;
-            uniform float intensity;
-            varying vec3 vNormal;
+    // const mistMaterial = new THREE.ShaderMaterial({
+    //     transparent: true,
+    //     depthWrite: false,
+    //     blending: THREE.AdditiveBlending,
+    //     uniforms: {
+    //         color: { value: new THREE.Color(0xffc4ff) },
+    //         intensity: { value: 0.15 }
+    //     },
+    //     vertexShader: `
+    //         varying vec3 vNormal;
+    //         void main() {
+    //             vNormal = normalize(normalMatrix * normal);
+    //             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    //         }
+    //     `,
+    //     fragmentShader: `
+    //         uniform vec3 color;
+    //         uniform float intensity;
+    //         varying vec3 vNormal;
 
-            void main() {
-                float radial = pow(length(vNormal.xy), 1.5);
-                float mist = smoothstep(1.4, 0.3, radial);
+    //         void main() {
+    //             float radial = pow(length(vNormal.xy), 1.5);
+    //             float mist = smoothstep(1.4, 0.3, radial);
 
-                gl_FragColor = vec4(color, mist * intensity);
-            }
-        `
-    });
+    //             gl_FragColor = vec4(color, mist * intensity);
+    //         }
+    //     `
+    // });
 
-    const mist = new THREE.Mesh(mistGeometry, mistMaterial);
-    scene.add(mist);
+    // const mist = new THREE.Mesh(mistGeometry, mistMaterial);
+    // // scene.add(mist);
 
-    // ---------- OUTER MIST (soft glow) ----------
-    const mistGeometry2 = new THREE.TubeGeometry(
-        curve,
-        200,
-        3,    // much thicker
-        24,
-        false
-    );
+    // // ---------- OUTER MIST (soft glow) ----------
+    // const mistGeometry2 = new THREE.TubeGeometry(
+    //     trimmedCurve,
+    //     200,
+    //     3,    // much thicker
+    //     24,
+    //     false
+    // );
 
-    const mistMaterial2 = new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        blending: THREE.AdditiveBlending,
-        uniforms: {
-            color: { value: new THREE.Color(0xffc4ff) },
-            intensity: { value: 0.04 },
-        },
-        vertexShader: `
-            varying vec3 vNormal;
-            void main() {
-                vNormal = normalize(normalMatrix * normal);
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform vec3 color;
-            uniform float intensity;
-            varying vec3 vNormal;
+    // const mistMaterial2 = new THREE.ShaderMaterial({
+    //     transparent: true,
+    //     depthWrite: false,
+    //     blending: THREE.AdditiveBlending,
+    //     uniforms: {
+    //         color: { value: new THREE.Color(0xffc4ff) },
+    //         intensity: { value: 0.04 },
+    //     },
+    //     vertexShader: `
+    //         varying vec3 vNormal;
+    //         void main() {
+    //             vNormal = normalize(normalMatrix * normal);
+    //             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    //         }
+    //     `,
+    //     fragmentShader: `
+    //         uniform vec3 color;
+    //         uniform float intensity;
+    //         varying vec3 vNormal;
 
-            void main() {
-                float radial = pow(length(vNormal.xy), 1.5);
-                float mist = smoothstep(1.4, 0.3, radial);
+    //         void main() {
+    //             float radial = pow(length(vNormal.xy), 1.5);
+    //             float mist = smoothstep(1.4, 0.3, radial);
 
-                gl_FragColor = vec4(color, mist * intensity);
-            }
-        `
-    });
+    //             gl_FragColor = vec4(color, mist * intensity);
+    //         }
+    //     `
+    // });
 
-    const mist2 = new THREE.Mesh(mistGeometry2, mistMaterial2);
-    scene.add(mist2);
+    // const mist2 = new THREE.Mesh(mistGeometry2, mistMaterial2);
+    // // scene.add(mist2);
 
-    return { core, mist, mist2 };
+    return { core, /*mist, mist2*/ };
 }
 
 function createAnimatedTrail(scene) {
+
+    // clone star positions
     const points = memoryStars.map(star => star.position.clone());
+
+    // ---------- CREATE PHANTOM POINT (spiral-aware) ----------
+    const pLast = points[points.length - 1];
+    const pPrev = points[points.length - 2];
+
+    const rLast = Math.hypot(pLast.x, pLast.y);
+    const rPrev = Math.hypot(pPrev.x, pPrev.y);
+
+    const angleLast = Math.atan2(pLast.y, pLast.x);
+    const anglePrev = Math.atan2(pPrev.y, pPrev.x);
+
+    const angleDelta = angleLast - anglePrev;
+    const radiusDelta = rLast - rPrev;
+    const zDelta = pLast.z - pPrev.z;
+
+    const phantom = new THREE.Vector3(
+        Math.cos(angleLast + angleDelta) * (rLast + radiusDelta),
+        Math.sin(angleLast + angleDelta) * (rLast + radiusDelta),
+        pLast.z + zDelta
+    );
+
     points.push(phantom);
 
-    const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
-    // tension: 0 = very loose, 1 = tighter (0.4–0.6 is nice)
+    // ---------- CURVE ----------
+    const curve = new THREE.CatmullRomCurve3(
+        points,
+        false,
+        'catmullrom',
+        0.5
+    );
+
     curve.closed = false;
-    curve.tension = 0.5;
-    
+
+    // ---------- GEOMETRY ----------
     const divisions = 200;
-    const curvePoints = curve.getPoints(divisions);
-    const arcLengths = curve.getLengths(divisions);
+    const curvePoints = curve.getPoints(divisions * 0.952);
+    const arcLengths = curve.getLengths(divisions * 0.952);
+
     const geometry = new THREE.BufferGeometry();
     geometry.setFromPoints(curvePoints);
     geometry.setDrawRange(0, 0);
@@ -263,7 +881,7 @@ function createAnimatedTrail(scene) {
 
     const line = new THREE.Line(geometry, material);
 
-    // store for animation
+    // ---------- ANIMATION DATA ----------
     line.userData = {
         totalPoints: curvePoints.length,
         currentCount: 0,
@@ -271,22 +889,24 @@ function createAnimatedTrail(scene) {
         totalLength: arcLengths[arcLengths.length - 1],
     };
 
-    // scene.add(line);
-    // addStardustTrail(scene, curve);
-    addTrailAura(scene, curve);
+    // scene.add(line); // optional if you want the spine
+    const trailAura = addTrailAura(scene, curve);
+
     return {
         line,
-        curve
+        curve,
+        core: trailAura.core
     };
 }
 
 function animateTrail(line, speed = 0.5) {
+    if (!started) return;
     if (line.userData.currentCount < line.userData.totalPoints) {
         line.userData.currentCount += speed;
 
         line.geometry.setDrawRange(
             0,
-            Math.floor(line.userData.currentCount)
+            Math.floor(line.userData.currentCount) * 0.952
         );
     }
 }
@@ -315,6 +935,49 @@ function updateStardust(particles, revealedLength) {
   pos.needsUpdate = true;
 }
 
+function fizzleLockIntoStardust(lock, stardustGroup, count = 50) {
+  const startPos = lock.getWorldPosition(new THREE.Vector3());
+  
+  const geometry = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const velocities = []; // store THREE.Vector3 for each particle
+
+  const spread = 2;
+  const speed = 3;
+
+  for (let i = 0; i < count; i++) {
+    positions[i * 3]     = startPos.x + (Math.random() - 0.5) * spread;
+    positions[i * 3 + 1] = startPos.y + (Math.random() - 0.5) * spread;
+    positions[i * 3 + 2] = startPos.z + (Math.random() - 0.5) * spread;
+
+    velocities.push(
+      new THREE.Vector3(
+        (Math.random() - 0.5) * speed,
+        Math.random() * speed + 1.0, // upward boost
+        (Math.random() - 0.5) * speed
+      )
+    );
+  }
+
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const material = new THREE.PointsMaterial({
+    color: 0xffc6ff,
+    size: 0.08,
+    transparent: true,
+    opacity: 1,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const points = new THREE.Points(geometry, material);
+  scene.add(points);
+
+  stardustGroup.push({ points, velocities, age: 0, fading: false });
+
+  centerStar.remove(lock);
+}
+
 const canvas = document.getElementById('scene');
 const scene = new THREE.Scene();
 
@@ -332,6 +995,29 @@ const trueOriginalCameraPos = new THREE.Vector3(camera.position.x, camera.positi
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+
+let clickedCenterStar = false;
+
+// Listen for clicks on the canvas
+renderer.domElement.addEventListener('click', (event) => {
+  if (!centerStar || !centerStar?.visible) return;
+
+  unhoverCenterStar();
+
+  // Convert mouse position to normalized device coordinates (-1 to +1)
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Raycast
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects([centerStar, lockSprite]);
+
+  if (intersects.length > 0) {
+    onCenterStarClicked();
+  }
+
+  clickedCenterStar = true;
+});
 
 // 💫 Bloom Effect Composer
 const composer = new EffectComposer(renderer);
@@ -377,39 +1063,43 @@ scene.add(stars);
 const memories = [
   {
     title: "The First Message",
-    text: "When one accidental message to the wrong person, turns out to be the right person.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br>\"Oh my god, I seem to have recognized the wrong person.\"</div>",
+    text: "One accidental message, and somehow, it led me to the right person.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br><br>\"Oh my god, I seem to have recognized the wrong person.\"</div>",
+  },
+  {
+    title: "The First Compliment",
+    text: "She showed me her nail art and said, 'ignore it!' I told her I liked it anyway. Just a tiny moment, but it made me smile all day."
   },
   {
     title: "Exploring the Queen's Kingdom",
-    text: "<div class=\"left\">\"I'm obsessed with Infinity Kingdom right now, are you interested in playing it together?\"<br>- \"When can I do the co-op thing?\"<br>\"I'll take you with me.\"</div>",
+    text: "<div class=\"left\">\"I'm obsessed with Infinity Kingdom right now, are you interested in playing it together?\"<br>- \"When can I join?\"<br>\"I'll take you with me.\"</div>",
   },
   {
     title: "The First Good Morning",
-    text: "The moment strangers became something more. Different time zones, same feeling.",
+    text: "The moment strangers became more than strangers. Different time zones, but the same feeling.",
   },
   {
     title: "Morning My Queen 🌙",
-    text: "Where affection stopped being accidental and started being intentional.",
+    text: "When affection stopped being accidental and became intentional.",
   },
   {
     title: "One Hundred Thousand",
-    text: "We reached 100K power together—not as teammates, but as something more.  Every step felt earned, shared, and unforgettable.",
+    text: "100K power together—not just as teammates, but as something more. Every step earned. Every moment shared. Unforgettable.",
   },
   {
     title: "No Longer a Secret",
-    text: "The moment we told the alliance.  What we had was real enough to be spoken out loud — and brave enough to be shared.",
+    text: "When we told the alliance. What we had wasn't just real—it was ours to share.",
   },
   {
     title: "World Heart — Conquered Together",
-    text: "Side by side. Same goal. Same fire. Our shadows moved as one.",
+    text: "Side by side. Same goal. Same fire. Our shadows moved together, as one.",
   },
   {
     title: "Chaos Beasts Fell That Night",
-    text: "We were unstoppable.",
+    text: "That night, we were unstoppable.",
   },
   {
     title: "Caught Checking Messages",
-    text: "Pretending to sleep. Hoping I'd text.",
+    text: "Pretending to sleep… secretly hoping you'd text me.",
   },
   {
     title: "Beauty Sleep for the Queen",
@@ -417,11 +1107,11 @@ const memories = [
   },
   {
     title: "Drooling, Apparently 😆",
-    text: "Proof that even queens are cute.",
+    text: "Even queens can be adorably caught off guard 😆",
   },
   {
     title: "Busy Days, Soft Nights",
-    text: "Even when the world was loud, you were my quiet.",
+    text: "Even when the world was loud, you are always my quiet.",
   },
   {
     title: "\"If I Need You to Thank Me Again…",
@@ -433,21 +1123,21 @@ const memories = [
   },
   {
     title: "\"Dear\"",
-    text: "A single word that somehow said everything. Soft, familiar, and ours.",
+    text: "One word. It said everything. Soft, familiar, and ours.",
   },
   {
     title: "I Wish I Could Steal Some Cuddles",
-    text: "Distance is temporary. This feeling isn't.",
+    text: "Distance is temporary. Our warmth isn't.",
   },
   {
     title: "Two Hundred Thousand",
-    text: "The world is ours to build. Everything and everyone else fades away as we forge our own path — side by side, hand in hand. Together.",
+    text: "The world is ours to build. Everything else fades as we forge our path—side by side, hand in hand, together.",
   },
   
   // 🌠 BOTTOM (future memory)
   {
     title: "—",
-    text: "This memory is still being written.",
+    text: "This memory… is still being written… for us.",
   },
 ];
 
@@ -472,16 +1162,16 @@ const memoryStars = [];
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-memories.forEach(mem => {
-  const geo = new THREE.SphereGeometry(0.6, 16, 16);
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0xfff1ff,
-    emissive: 0xffe0ff,
-    emissiveIntensity: 1.6,
-    transparent: true,
-    opacity: 0.9,
-  });
+const geo = new THREE.SphereGeometry(0.6, 16, 16);
+const mat = new THREE.MeshStandardMaterial({
+  color: 0xfff1ff,
+  emissive: 0xffe0ff,
+  emissiveIntensity: 1.6,
+  transparent: true,
+  opacity: 0.9,
+});
 
+memories.forEach(mem => {
   const star = new THREE.Mesh(geo, mat);
   star.position.copy(mem.position);
   star.userData = {
@@ -517,15 +1207,59 @@ const phantom = new THREE.Vector3(
   last.z + (last.z - prev.z) // preserve vertical trend
 );
 
+const hiddenStar = new THREE.Mesh(geo, mat);
+hiddenStar.userData = {
+  isFinalMemory: true,
+  revealed: false,
+  title: phantomMemoryTitle,
+  text: phantomMemoryText,
+  baseScale: hiddenStar.scale.clone(),
+  isHovering: false,
+  brightnessOffset: Math.random() * 0.5,
+  brightnessSpeed: 0.001 + Math.random() * 0.002,
+};
+hiddenStar.position.copy(phantom);
+hiddenStar.visible = false;
+scene.add(hiddenStar);
+
 const attentionPulse = createAttentionPulse(memoryStars[0].position);
 
 // addConnectingLines(scene);
-const animatedTrail = createAnimatedTrail(scene);
-const trail = animatedTrail.line;
-const curve = animatedTrail.curve;
-const stardust = createStardust(curve, 6000);
-scene.add(stardust);
-scene.add(trail);
+// const animatedTrail = createAnimatedTrail(scene);
+// const core = animatedTrail.core;
+// const trail = animatedTrail.line;
+// const curve = animatedTrail.curve;
+// const stardust = createStardust(curve, 6000);
+// scene.add(stardust);
+// scene.add(trail);
+let animatedTrail, core, trail, curve, stardust = null;
+let centerStar = null;
+let centerText = document.getElementById('centerText');
+let centerText2 = document.getElementById('centerText2');
+
+// let lockIcon = document.getElementById('starLock');
+function enterTheStars() {
+  if (started) return;
+  started = true;
+  loadShimmers();
+  createCenterStar();
+
+  // 🎶 Audio permission + music
+  initAudio();
+  audioCtx.resume().catch(() => {});
+  playMusicIfNeeded();
+
+  // 🌠 Create animated trail + aura
+  animatedTrail = createAnimatedTrail(scene);
+  core = animatedTrail.core;
+  trail = animatedTrail.line;
+  curve = animatedTrail.curve;
+
+  // ✨ Create stardust AFTER curve exists
+  stardust = createStardust(curve, 6000);
+  scene.add(stardust);
+  scene.add(trail);
+}
 
 // 🌙 Gentle Mouse Parallax
 let targetX = 0;
@@ -586,6 +1320,7 @@ function unhoverStar(star) {
 
 // 🎯 Proximity Detection (Desktop & Mobile)
 function updateProximity() {
+  if (!started) return;
   // Use the forgiving clickTolerance on desktop so near-misses still trigger hover
   const proximityThreshold = isMobile() ? 0.7 : clickTolerance;
 
@@ -650,6 +1385,7 @@ function tryOpenMemoryWithRay(rayOrigin) {
 }
 
 window.addEventListener('click', (e) => {
+  if (!started) return;
   // Prevent clicking on stars while overlay is open
   if (!overlay.classList.contains('hidden')) {
     return;
@@ -700,6 +1436,7 @@ const closeBtn = document.getElementById('closeMemory');
 const nextBtn = document.getElementById('nextMemory');
 
 function openMemory(mem) {
+  playMusicIfNeeded();
   if (attentionPulse) {
     scene.remove(attentionPulse);
   }
@@ -773,6 +1510,7 @@ function openMemory(mem) {
 closeBtn.onclick = (e) => {
   e.stopPropagation();
   overlay.classList.add('hidden');
+  var starSelected = selectedStar;
   // 💜 Reset the star's emissive intensity and make it visible again
   if (selectedStar) {
     selectedStar.visible = true;
@@ -786,6 +1524,14 @@ closeBtn.onclick = (e) => {
   selectedStar = null;
   isZoomedIn = false;
   // Don't reset zoomProgress here—let animate loop handle the zoom-out
+
+  var memoryStarsContainsPhantom = memoryStars.some(star => star.userData.isFinalMemory);
+  if (!memoryStarsContainsPhantom && starSelected == memoryStars[memoryStars.length - 1]) {
+    onLastMemoryClosed();
+  }
+  else if (memoryStarsContainsPhantom && starSelected.userData.isFinalMemory) {
+    onPhantomMemoryClosed();
+  }
 };
 
 nextBtn.onclick = (e) => {
@@ -856,33 +1602,49 @@ window.addEventListener('resize', () => {
 function animate() {
   requestAnimationFrame(animate);
 
-  trail.material.opacity = 0.4 + (trail.userData.currentCount / trail.userData.totalPoints) * 0.3;
+  if (started) {
+    trail.material.opacity = 0.4 + (trail.userData.currentCount / trail.userData.totalPoints) * 0.3;
 
-  animateTrail(trail, 0.2);
+    const delta = 0.016; // ~60fps
 
-  const revealedLength =
-    (trail.userData.currentCount / trail.userData.totalPoints) *
-    trail.userData.totalLength;
+    // update stardust particles
+    if (lockStardusts.length) {
+      updateLockStardusts(delta);
+    }
 
-  updateStardust(stardust, revealedLength);
+    animateCore(core, 33);
+
+    animateTrail(trail, 0.2);
+
+    const revealedLength =
+      (trail.userData.currentCount / trail.userData.totalPoints) *
+      trail.userData.totalLength;
+
+    updateStardust(stardust, revealedLength);
+  }
 
   // 🔍 Handle camera zoom-in/out effect
   if (isZoomedIn) {
     // Smoothly zoom in toward selected star (romantic, gentle)
     zoomProgress = Math.min(zoomProgress + 0.02, 1);
+    core.visible = false;
   } else if (zoomProgress > 0) {
     // Smoothly zoom back out (very slow, romantic)
     zoomProgress = Math.max(zoomProgress - 0.01, 0);
+    core.visible = true;
   }
   
   // Interpolate camera position
   if (zoomProgress > 0 && selectedStar) {
     // Target: move toward star, closer and centered on it
-    const targetPos = selectedStar.position.clone();
-    targetPos.z += 5; // keep some distance for immersive close-up
+    const offset = new THREE.Vector3(2, 0, 5); // 👈 x=2 moves star left, z=5 keeps distance
+    const targetPos = selectedStar.position.clone().add(offset);
     
     camera.position.lerp(targetPos, zoomProgress * 0.05);
-    camera.lookAt(selectedStar.position);
+
+    const lookAtTarget = selectedStar.position.clone();
+    lookAtTarget.x += 2; // keep star slightly left of center
+    camera.lookAt(lookAtTarget);
   } else if (zoomProgress > 0 && !isZoomedIn) {
     // Zooming out: lerp back to true original position (very smooth, romantic)
     camera.position.lerp(trueOriginalCameraPos, 0.05);
@@ -970,6 +1732,11 @@ function animate() {
   }
 
   composer.render();
+
+  interactWithStardust(stardust);
+  if (centerStar?.visible) {
+    checkCenterStarHover();
+  }
 }
 
 animate();
