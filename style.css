@@ -26,31 +26,6 @@ canvas {
   display: none !important;
 }
 
-/* .memory-content {
-  max-width: 420px;
-  min-height: 500px;
-  text-align: left;
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(5, 5, 8, 0.85);
-  margin: 2rem;
-} */
-
-/* .memory-content h2 {
-  font-weight: normal;
-  margin-bottom: 1rem;
-} */
-/* 
-.memory-content p {
-  line-height: 1.6;
-  opacity: 0.9;
-} */
-
-/* #memoryButtons {
-  display: flex;
-  justify-content: space-between;
-} */
-
 .memory-content button {
   margin-top: 1.5rem;
   background: none;
@@ -134,16 +109,6 @@ canvas#scene {
   z-index: 10;       /* higher than the canvas */
   pointer-events: auto; /* if clickable */
 }
-
-/* For centering */
-/* .center-text {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: white;
-  font-size: 2rem;
-} */
 
 .star-lock {
   top: 44%;

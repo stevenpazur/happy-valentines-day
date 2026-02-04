@@ -57,9 +57,6 @@ function updateLockStardusts(delta) {
       // Rotate velocity slightly around Y-axis
       velocities[j].x = vx * Math.cos(swirlStrength * delta) - vz * Math.sin(swirlStrength * delta);
       velocities[j].z = vx * Math.sin(swirlStrength * delta) + vz * Math.cos(swirlStrength * delta);
-
-      // slowly reduce velocity to simulate fizzle
-      // velocities[j].multiplyScalar(0.5);
     }
 
     // Only fade when told to
@@ -366,11 +363,6 @@ function revealPhantomMemory() {
   animate();
 }
 
-// function restoreCameraView() {
-//   camera.position.copy(savedCameraPosition);
-//   camera.quaternion.copy(savedCameraQuaternion);
-// }
-
 function startStarPulse(star) {
   const baseScale = 1;
   const pulseAmount = 0.08;
@@ -509,13 +501,7 @@ function createCenterStar() {
 }
 
 function onPhantomMemoryClosed() {
-  // 1. Restore camera so she's not stuck staring
-  // restoreCameraView();
-
-  // 2. Give control back to Lin
-  // enableFreeNavigation(true);
-
-  // 3. Small emotional pause
+  // Small emotional pause
   setTimeout(() => {
     spawnCenterStar();
   }, 600);
@@ -741,90 +727,7 @@ function addTrailAura(scene, curve) {
     core.userData.totalPoints = coreGeometry.attributes.position.count * 30;
     scene.add(core);
 
-
-    // // ---------- OUTER MIST (soft glow) ----------
-    // const mistGeometry = new THREE.TubeGeometry(
-    //     trimmedCurve,
-    //     200,
-    //     1.5,    // much thicker
-    //     24,
-    //     false
-    // );
-
-    // const mistMaterial = new THREE.ShaderMaterial({
-    //     transparent: true,
-    //     depthWrite: false,
-    //     blending: THREE.AdditiveBlending,
-    //     uniforms: {
-    //         color: { value: new THREE.Color(0xffc4ff) },
-    //         intensity: { value: 0.15 }
-    //     },
-    //     vertexShader: `
-    //         varying vec3 vNormal;
-    //         void main() {
-    //             vNormal = normalize(normalMatrix * normal);
-    //             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    //         }
-    //     `,
-    //     fragmentShader: `
-    //         uniform vec3 color;
-    //         uniform float intensity;
-    //         varying vec3 vNormal;
-
-    //         void main() {
-    //             float radial = pow(length(vNormal.xy), 1.5);
-    //             float mist = smoothstep(1.4, 0.3, radial);
-
-    //             gl_FragColor = vec4(color, mist * intensity);
-    //         }
-    //     `
-    // });
-
-    // const mist = new THREE.Mesh(mistGeometry, mistMaterial);
-    // // scene.add(mist);
-
-    // // ---------- OUTER MIST (soft glow) ----------
-    // const mistGeometry2 = new THREE.TubeGeometry(
-    //     trimmedCurve,
-    //     200,
-    //     3,    // much thicker
-    //     24,
-    //     false
-    // );
-
-    // const mistMaterial2 = new THREE.ShaderMaterial({
-    //     transparent: true,
-    //     depthWrite: false,
-    //     blending: THREE.AdditiveBlending,
-    //     uniforms: {
-    //         color: { value: new THREE.Color(0xffc4ff) },
-    //         intensity: { value: 0.04 },
-    //     },
-    //     vertexShader: `
-    //         varying vec3 vNormal;
-    //         void main() {
-    //             vNormal = normalize(normalMatrix * normal);
-    //             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    //         }
-    //     `,
-    //     fragmentShader: `
-    //         uniform vec3 color;
-    //         uniform float intensity;
-    //         varying vec3 vNormal;
-
-    //         void main() {
-    //             float radial = pow(length(vNormal.xy), 1.5);
-    //             float mist = smoothstep(1.4, 0.3, radial);
-
-    //             gl_FragColor = vec4(color, mist * intensity);
-    //         }
-    //     `
-    // });
-
-    // const mist2 = new THREE.Mesh(mistGeometry2, mistMaterial2);
-    // // scene.add(mist2);
-
-    return { core, /*mist, mist2*/ };
+    return { core };
 }
 
 function createAnimatedTrail(scene) {
@@ -1224,14 +1127,6 @@ scene.add(hiddenStar);
 
 const attentionPulse = createAttentionPulse(memoryStars[0].position);
 
-// addConnectingLines(scene);
-// const animatedTrail = createAnimatedTrail(scene);
-// const core = animatedTrail.core;
-// const trail = animatedTrail.line;
-// const curve = animatedTrail.curve;
-// const stardust = createStardust(curve, 6000);
-// scene.add(stardust);
-// scene.add(trail);
 let animatedTrail, core, trail, curve, stardust = null;
 let centerStar = null;
 let centerText = document.getElementById('centerText');
