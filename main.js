@@ -1040,7 +1040,7 @@ const memories = [
   // 🌠 BOTTOM (future memory)
   {
     title: "—",
-    text: "This memory… is still being written… for us.",
+    text: "I see you've followed the stars… Now, <strong>close this memory</strong>, and let me show you the last little secret I saved just for you. ❤️",
   },
 ];
 
@@ -1063,6 +1063,7 @@ memories.forEach((memory, i) => {
 
 const memoryStars = [];
 const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = 0.6;
 const mouse = new THREE.Vector2();
 
 const geo = new THREE.SphereGeometry(0.6, 16, 16);
@@ -1159,6 +1160,11 @@ function enterTheStars() {
 // 🌙 Gentle Mouse Parallax
 let targetX = 0;
 let targetY = 0;
+
+// Buttery smooth finger movement on mobile
+let isTouching = false;
+let lastTouch = new THREE.Vector2();
+const PAN_LIMIT = 6;
 
 // 📱 Detect if mobile/touch device
 const isMobile = () => window.innerWidth < 768 || 'ontouchstart' in window;
@@ -1297,8 +1303,36 @@ window.addEventListener('click', (e) => {
   }
 });
 
+// 📱 Touch Pan Controls
+window.addEventListener('touchstart', (e) => {
+  if (!e.touches.length) return;
+  isTouching = true;
+
+  const t = e.touches[0];
+  lastTouch.set(t.clientX, t.clientY);
+});
+
+window.addEventListener('touchmove', (e) => {
+  if (!isTouching || !e.touches.length) return;
+
+  const t = e.touches[0];
+
+  const dx = t.clientX - lastTouch.x;
+  const dy = t.clientY - lastTouch.y;
+
+  // Convert pixels → normalized movement
+  targetX += dx * -0.02;
+  targetY -= dy * -0.02;
+
+  lastTouch.set(t.clientX, t.clientY);
+});
+
+
 // Also handle touch taps (mobile)
 window.addEventListener('touchend', (e) => {
+  isTouching = false;
+  if (!e.changedTouches.length) return;
+
   // Prevent clicking on stars while overlay is open
   if (!overlay.classList.contains('hidden')) {
     return;
@@ -1311,7 +1345,14 @@ window.addEventListener('touchend', (e) => {
     mouse.y = -(t.clientY / window.innerHeight) * 2 + 1;
     tryOpenMemoryWithRay(mouse);
   } else {
-    tryOpenMemoryWithRay(null);
+    const touch = e.changedTouches[0];
+
+    const ndc = new THREE.Vector2(
+      (touch.clientX / window.innerWidth) * 2 - 1,
+      -(touch.clientY / window.innerHeight) * 2 + 1
+    );
+
+    tryOpenMemoryWithRay(ndc);
   }
 });
 
@@ -1361,39 +1402,108 @@ function openMemory(mem) {
     
     // Create heart shape geometry
     const heartShape = new THREE.Shape();
-    const x = 0;
-    const y = 0;
+
+    // Classic parametric heart curve (clean + symmetric)
+    heartShape.moveTo(0, 2);
+
+    heartShape.bezierCurveTo(2, 4, 6, 4, 6, 0);
+    heartShape.bezierCurveTo(6, -4, 0, -6, 0, -10);
+    heartShape.bezierCurveTo(0, -6, -6, -4, -6, 0);
+    heartShape.bezierCurveTo(-6, 4, -2, 4, 0, 2);
+
     
-    heartShape.moveTo(x + 5, y + 5);
-    heartShape.bezierCurveTo(x + 5, y + 5, x, y, x, y - 5);
-    heartShape.bezierCurveTo(x, y - 5, x - 8, y - 8, x - 8, y - 3);
-    heartShape.bezierCurveTo(x - 8, y + 2, x - 5, y + 5, x, y + 8);
-    heartShape.bezierCurveTo(x + 5, y + 5, x + 8, y + 2, x + 8, y - 3);
-    heartShape.bezierCurveTo(x + 8, y - 8, x + 5, y - 5, x + 5, y - 5);
+    // // Extrude the heart to give it 3D depth
+    // const heartGeo = new THREE.ExtrudeGeometry(heartShape, {
+    //   depth: 0.4,
+    //   bevelEnabled: true,
+    //   bevelThickness: 0.1,
+    //   bevelSize: 0.1,
+    //   bevelSegments: 3,
+    // });
+    // heartGeo.scale(0.085, 0.08, 0.05);
+    // heartGeo.center();
     
-    // Extrude the heart to give it 3D depth
-    const heartGeo = new THREE.ExtrudeGeometry(heartShape, {
-      depth: 0.4,
-      bevelEnabled: true,
-      bevelThickness: 0.1,
-      bevelSize: 0.1,
-      bevelSegments: 3,
-    });
-    heartGeo.scale(0.08, 0.08, 0.08); // scale down to match star size
-    heartGeo.center();
-    
-    const heartMat = new THREE.MeshStandardMaterial({
-      color: 0xff69b4,
-      emissive: 0xff1493,
-      emissiveIntensity: 3,
-      transparent: true,
-      opacity: 0.7,
-    });
-    heartbeatAura = new THREE.Mesh(heartGeo, heartMat);
-    heartbeatAura.position.copy(selectedStar.position);
-    heartbeatAura.position.z += 0.1; // slightly forward
-    heartbeatAura.rotation.x = Math.PI; // flip heart right-side up
-    scene.add(heartbeatAura);
+    // const heartMat = new THREE.MeshStandardMaterial({
+    //   color: 0xff69b4,
+    //   emissive: 0xff69b4,
+    //   emissiveIntensity: 0.6,   // was 3 → much softer
+    //   roughness: 0.4,
+    //   metalness: 0.1,
+    //   transparent: true,
+    //   opacity: 0.85
+    // });
+
+    // heartbeatAura = new THREE.Mesh(heartGeo, heartMat);
+    // heartbeatAura.position.copy(selectedStar.position);
+    // heartbeatAura.position.z += 0.1; // slightly forward
+    // // heartbeatAura.rotation.x = Math.PI; // flip heart right-side up
+    // scene.add(heartbeatAura);
+
+    // // Heart points
+    // const points = heartShape.getPoints(50);
+    // const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+    // // Main outline
+    // const mainLineMat = new THREE.LineBasicMaterial({
+    //     color: 0xff69b4,
+    //     linewidth: 2,
+    // });
+    // const heartOutline = new THREE.LineLoop(geometry, mainLineMat);
+
+    // // Glowing halo
+    // const glowLineMat = new THREE.LineBasicMaterial({
+    //     color: 0xff69b4,
+    //     transparent: true,
+    //     opacity: 0.4,
+    // });
+    // const heartGlow = new THREE.LineLoop(geometry, glowLineMat);
+    // heartGlow.scale.set(1.2, 1.2, 1); // slightly bigger for halo
+
+    // // Position & rotation
+    // [heartOutline, heartGlow].forEach(line => {
+    //     line.scale.multiplyScalar(0.08);
+    //     line.position.copy(selectedStar.position);
+    //     line.position.z += 0.15; // in front of star
+    //     scene.add(line);
+    // });
+
+    // // Optional: animate pulse
+    // function pulseHeartOutline() {
+    //     const scale = 0.08 + 0.005 * Math.sin(performance.now() * 0.005);
+    //     heartOutline.scale.set(scale, scale, scale);
+    //     heartGlow.scale.set(scale * 1.2, scale * 1.2, scale);
+    //     requestAnimationFrame(pulseHeartOutline);
+    // }
+    // pulseHeartOutline();
+
+    // Use the same heartShape
+const outlineGeo = new THREE.ExtrudeGeometry(heartShape, {
+    depth: 0.05, // super thin
+    bevelEnabled: false,
+});
+
+// Heart glow material
+const glowMat = new THREE.MeshStandardMaterial({
+    color: 0xff69b4,
+    emissive: 0xff69b4,
+    emissiveIntensity: 5, // <-- this controls the glow strength
+    transparent: true,
+    opacity: 0.6,
+    side: THREE.DoubleSide,
+});
+
+// Create mesh
+const heartGlow = new THREE.Mesh(outlineGeo, glowMat);
+
+// Position & rotation
+heartGlow.scale.set(0.08, 0.08, 0.08);
+// heartGlow.rotation.x = Math.PI;
+heartGlow.position.copy(selectedStar.position);
+heartGlow.position.z += 0.15; // slightly in front
+scene.add(heartGlow);
+
+
+
     
     // �🔍 Zoom-in effect: save original position and start zoom
     originalCameraPos.copy(camera.position);
@@ -1545,8 +1655,8 @@ function animate() {
     camera.position.lerp(trueOriginalCameraPos, 0.05);
   } else if (zoomProgress === 0) {
     // Reset to parallax behavior when fully zoomed out
-    camera.position.x += (targetX * 4 - camera.position.x) * 0.05;
-    camera.position.y += (-targetY * 4 - camera.position.y) * 0.05;
+    camera.position.x += (targetX - camera.position.x) * 0.05;
+    camera.position.y += (targetY - camera.position.y) * 0.05;
   }
 
   stars.rotation.y += 0.0002;
@@ -1632,6 +1742,9 @@ function animate() {
   if (centerStar?.visible) {
     checkCenterStarHover();
   }
+
+  targetX = THREE.MathUtils.clamp(targetX, -PAN_LIMIT, PAN_LIMIT);
+  targetY = THREE.MathUtils.clamp(targetY, -PAN_LIMIT, PAN_LIMIT);
 }
 
 animate();
