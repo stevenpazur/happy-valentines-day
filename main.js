@@ -39,7 +39,8 @@ every game we haven't played,<br>
 every tomorrow we'll discover together.<br><br>
 
 This star is our future —<br>
-and I can't wait to keep creating it with you.`;
+and I can't wait to keep creating it with you.<br><br>
+<span class="hint-text">✨ Close this memory for one final little surprise… ✨</span>`;
 
 const bgm = new Audio('assets/constellation-love.mp3');
 bgm.loop = true;
@@ -145,7 +146,7 @@ function onCenterStarClicked() {
 
   setTimeout(() => {
     showCenterMessage(
-      "Happy Valentine's Day, Lin ❤️",
+      "Happy Valentines Day, Lin ❤️",
       centerText,
       { fadeIn: 3000 }
     );
