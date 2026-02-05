@@ -455,6 +455,13 @@ function spawnCenterStar() {
   centerStar.scale.set(0.1, 0.1, 0.1);
 
   animateStarIn(centerStar);
+
+  if (isMobile() || isMobileTest) {
+    centerStarTooltip.classList.add('visible');
+    centerStarTooltip.classList.remove('hidden');
+    centerStarTooltip.style.left = '50%';
+    centerStarTooltip.style.top = '55%';
+  }
 }
 
 function showCenterMessage(message, centerText, options = {}) {
@@ -983,80 +990,81 @@ const stars = new THREE.Points(starGeometry, starMaterial);
 scene.add(stars);
 
 const memories = [
+  // --- Beginnings ---
   {
     title: "The First Message",
-    text: "One accidental message, and somehow, it led me to the right person.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br><br>\"Oh my god, I seem to have recognized the wrong person.\"</div>",
+    text: "One accidental message, and somehow, it led me to the right person.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br><br>\"Oh my god, I seem to have recognized the wrong person.\" — I couldn’t stop smiling after reading this.</div>",
   },
   {
     title: "The First Compliment",
-    text: "She showed me her nail art and said, 'ignore it!' I told her I liked it anyway. Just a tiny moment, but it made me smile all day."
+    text: "She showed me her nail art and said, 'ignore it!' I told her I liked it anyway. That tiny moment made my day glow.",
   },
+  {
+    title: "The First Good Morning",
+    text: "Strangers became more than strangers. Different time zones, same feeling, same heartbeat.",
+  },
+  {
+    title: "Morning My Queen 🌙",
+    text: "Affection stopped being accidental—it became intentional, just for you.",
+  },
+
+  // --- Shared adventures / milestones ---
   {
     title: "Exploring the Queen's Kingdom",
     text: "<div class=\"left\">\"I'm obsessed with Infinity Kingdom right now, are you interested in playing it together?\"<br>- \"When can I join?\"<br>\"I'll take you with me.\"</div>",
   },
   {
-    title: "The First Good Morning",
-    text: "The moment strangers became more than strangers. Different time zones, but the same feeling.",
-  },
-  {
-    title: "Morning My Queen 🌙",
-    text: "When affection stopped being accidental and became intentional.",
-  },
-  {
-    title: "One Hundred Thousand",
-    text: "100K power together—not just as teammates, but as something more. Every step earned. Every moment shared. Unforgettable.",
-  },
-  {
-    title: "No Longer a Secret",
-    text: "When we told the alliance. What we had wasn't just real—it was ours to share.",
+    title: "Our Kingdom, Our Power",
+    text: "100K, 200K… every milestone wasn’t just numbers. It was us—together, unstoppable, side by side.<br><br><em>One spark leads to another… just like the stars ahead.</em>",
   },
   {
     title: "World Heart — Conquered Together",
-    text: "Side by side. Same goal. Same fire. Our shadows moved together, as one.",
+    text: "Side by side, same fire, same goal. Our shadows moved as one, unstoppable and inseparable.",
   },
   {
     title: "Chaos Beasts Fell That Night",
-    text: "That night, we were unstoppable.",
+    text: "We laughed, we fought, we conquered—together, unstoppable.<br><br><em>Something glimmers in the distance… can you see it?</em>",
   },
   {
+    title: "No Longer a Secret",
+    text: "When we shared our bond with the alliance, it wasn't just real—it was ours to cherish.",
+  },
+
+  // --- Personal / playful ---
+  {
     title: "Caught Checking Messages",
-    text: "Pretending to sleep… secretly hoping you'd text me.",
+    text: "Pretending to sleep… secretly hoping for your text, always.",
   },
   {
     title: "Beauty Sleep for the Queen",
-    text: "The kingdom can wait. You come first.",
+    text: "The kingdom can wait. You always come first.<br><em>Even while the stars sparkle quietly in the night…</em>",
   },
   {
     title: "Drooling, Apparently 😆",
-    text: "Even queens can be adorably caught off guard 😆",
+    text: "Even queens have their adorable moments 😆",
   },
   {
     title: "Busy Days, Soft Nights",
-    text: "Even when the world was loud, you are always my quiet.",
+    text: "Even when the world is loud, you are my quiet, my calm.",
+  },
+  {
+    title: "Spicy Noodles & Brave Hearts",
+    text: "You handle it all—still irresistibly adorable doing it.",
   },
   {
     title: "\"If I Need You to Thank Me Again…",
     text: "…all I need is a kiss.\"",
   },
   {
-    title: "Spicy Noodles & Brave Hearts",
-    text: "She could handle it. Still adorable about it.",
-  },
-  {
     title: "\"Dear\"",
-    text: "One word. It said everything. Soft, familiar, and ours.",
+    text: "One word. It says everything. Soft, familiar, ours.",
   },
   {
     title: "I Wish I Could Steal Some Cuddles",
-    text: "Distance is temporary. Our warmth isn't.",
+    text: "Distance may be temporary, but our warmth isn't.<br><em>Follow the stardust… a final sparkle awaits.</em>",
   },
-  {
-    title: "Two Hundred Thousand",
-    text: "The world is ours to build. Everything else fades as we forge our path—side by side, hand in hand, together.",
-  },
-  
-  // 🌠 BOTTOM (future memory)
+
+  // --- Phantom star / final memory ---
   {
     title: "—",
     text: "I see you've followed the stars… Now, <strong>close this memory</strong>, and let me show you the last little secret I saved just for you. ❤️",
@@ -1082,8 +1090,8 @@ memories.forEach((memory, i) => {
 
 const memoryStars = [];
 const raycaster = new THREE.Raycaster();
-raycaster.params.Points.threshold = 0.6;
-raycaster.params.Line.threshold = 0.6;
+raycaster.params.Points.threshold = 2.6;
+raycaster.params.Line.threshold = 2.6;
 const mouse = new THREE.Vector2();
 
 const geo = new THREE.SphereGeometry(0.6, 16, 16);
@@ -1153,6 +1161,8 @@ let centerStar = null;
 let centerText = document.getElementById('centerText');
 let centerText2 = document.getElementById('centerText2');
 
+const isMobileTest = /iPhone|iPad|Android/i.test(navigator.userAgent);
+
 // let lockIcon = document.getElementById('starLock');
 function enterTheStars() {
   if (started) return;
@@ -1172,8 +1182,7 @@ function enterTheStars() {
   curve = animatedTrail.curve;
 
   // ✨ Create stardust AFTER curve exists
-  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-  const STAR_COUNT = isMobile ? 1800 : 6000;
+  const STAR_COUNT = isMobileTest ? 1800 : 6000;
   stardust = createStardust(curve, STAR_COUNT);
   scene.add(stardust);
   scene.add(trail);
@@ -1342,9 +1351,11 @@ window.addEventListener('touchmove', (e) => {
   const dx = t.clientX - lastTouch.x;
   const dy = t.clientY - lastTouch.y;
 
+  const MOVEMENT_SENSITIVITY = isMobile() ? -0.02 : 0.02;
+
   // Convert pixels → normalized movement
-  targetX += dx * -0.02;
-  targetY -= dy * -0.02;
+  targetX += dx * MOVEMENT_SENSITIVITY;
+  targetY -= dy * MOVEMENT_SENSITIVITY;
 
   lastTouch.set(t.clientX, t.clientY);
 });
