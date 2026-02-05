@@ -41,7 +41,7 @@ canvas {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  backdrop-filter: blur(6px);
+  /* backdrop-filter: blur(6px); */
 }
 
 .hidden {

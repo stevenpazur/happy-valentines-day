@@ -3,6 +3,25 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
+function handleResize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(width, height);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+}
+
+// normal resize
+window.addEventListener("resize", handleResize);
+
+// orientation change (important for iOS)
+window.addEventListener("orientationchange", () => {
+  setTimeout(handleResize, 300); 
+});
+
 let started = false;
 const startOverlay = document.getElementById('startOverlay');
 
@@ -1064,6 +1083,7 @@ memories.forEach((memory, i) => {
 const memoryStars = [];
 const raycaster = new THREE.Raycaster();
 raycaster.params.Points.threshold = 0.6;
+raycaster.params.Line.threshold = 0.6;
 const mouse = new THREE.Vector2();
 
 const geo = new THREE.SphereGeometry(0.6, 16, 16);
@@ -1152,7 +1172,9 @@ function enterTheStars() {
   curve = animatedTrail.curve;
 
   // ✨ Create stardust AFTER curve exists
-  stardust = createStardust(curve, 6000);
+  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  const STAR_COUNT = isMobile ? 1800 : 6000;
+  stardust = createStardust(curve, STAR_COUNT);
   scene.add(stardust);
   scene.add(trail);
 }
