@@ -5,6 +5,7 @@ html, body {
   background: #050508;
   font-family: 'Georgia', serif;
   color: #eee;
+  overscroll-behavior: none;
 }
 
 canvas {
