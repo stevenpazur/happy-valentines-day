@@ -475,7 +475,7 @@ function showCenterMessage(message, centerText, options = {}) {
     centerText.style.opacity = 1; // just show immediately
   }
 
-  // remove the hidden class so it’s visible
+  // remove the hidden class so it's visible
   centerText.classList.remove('hidden');
 
   // auto-hide after duration if provided
@@ -709,7 +709,8 @@ function getTrimmedCurve(curve, divisions = 200, trimPercent = 0.952) {
 }
 
 function addTrailAura(scene, curve) {
-    const trimmedCurve = getTrimmedCurve(curve, 200, 0.95);
+    console.log(memories.length);
+    const trimmedCurve = getTrimmedCurve(curve, 200, (memories.length + 1) / (memories.length + 2));
 
     // ---------- INNER CORE (bright spine) ----------
     const coreGeometry = new THREE.TubeGeometry(
@@ -993,82 +994,104 @@ scene.add(stars);
 const memories = [
   // --- Beginnings ---
   {
-    title: "The First Message",
-    text: "One accidental message, and somehow, it led me to the right person.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br><br>\"Oh my god, I seem to have recognized the wrong person.\" — I couldn’t stop smiling after reading this.</div>",
+    title: "The Wrong Message That Was Right",
+    text: "One mistaken message.<br>One tiny accident.<br>And somehow… the universe placed you in front of me.<br><br><div class=\"left\">\"Hey, did you get the email from our alliance?\"<br>\"Oh my god, I recognized the wrong person.\"</div><br><br>I didn't know it then…<br>But everything I love began there.",
   },
   {
     title: "The First Compliment",
-    text: "She showed me her nail art and said, 'ignore it!' I told her I liked it anyway. That tiny moment made my day glow.",
+    text: "You told me to ignore your nails.<br>I couldn't.<br><br>Because even in small details…<br>You were already beautiful to me.",
   },
   {
-    title: "The First Good Morning",
-    text: "Strangers became more than strangers. Different time zones, same feeling, same heartbeat.",
+    title: "Our First Good Morning",
+    text: "Different skies.<br>Different time zones.<br>Same heartbeat.<br><br>Strangers quietly becoming something more.",
   },
   {
-    title: "Morning My Queen 🌙",
-    text: "Affection stopped being accidental—it became intentional, just for you.",
+    title: "Morning, My Queen",
+    text: "Affection stopped being accidental.<br>It chose you.<br><br>Every morning…<br>You are my first thought.<br><br>Every night…<br>You are my last thought.<br><br>And every moment in between.<br>You are my everything.",
   },
 
-  // --- Shared adventures / milestones ---
+  // --- Shared adventures ---
   {
-    title: "Exploring the Queen's Kingdom",
-    text: "<div class=\"left\">\"I'm obsessed with Infinity Kingdom right now, are you interested in playing it together?\"<br>- \"When can I join?\"<br>\"I'll take you with me.\"</div>",
+    title: "The Invitation",
+    text: "\"I'm obsessed with Infinity Kingdom… want to play together?\"<br>\"When can I join?\"<br>\"I'll take you with me.\"<br><br>You didn't just invite me to a game.<br>You invited me into your world.",
   },
   {
     title: "Our Kingdom, Our Power",
-    text: "100K, 200K… every milestone wasn’t just numbers. It was us—together, unstoppable, side by side.<br><br><em>One spark leads to another… just like the stars ahead.</em>",
+    text: "100K.<br>200K.<br>300K.<br>Milestone after milestone.<br><br>Not numbers.<br>Not power.<br><br>Us.",
   },
   {
     title: "World Heart — Conquered Together",
-    text: "Side by side, same fire, same goal. Our shadows moved as one, unstoppable and inseparable.",
+    text: "Same battlefield.<br>Same fire.<br>Same purpose.<br><br>Two souls moving like one.",
   },
   {
     title: "Chaos Beasts Fell That Night",
-    text: "We laughed, we fought, we conquered—together, unstoppable.<br><br><em>Something glimmers in the distance… can you see it?</em>",
+    text: "We fought.<br>We laughed.<br>We stayed.<br><br>That's when I realized…<br>I never want to fight alone again.",
   },
   {
     title: "No Longer a Secret",
-    text: "When we shared our bond with the alliance, it wasn't just real—it was ours to cherish.",
+    text: "When we shared our bond with the alliance…<br>It stopped being just feelings.<br><br>It became real.",
   },
 
   // --- Personal / playful ---
   {
     title: "Caught Checking Messages",
-    text: "Pretending to sleep… secretly hoping for your text, always.",
+    text: "Pretending to sleep.<br>Actually waiting.<br><br>Always you.",
   },
   {
-    title: "Beauty Sleep for the Queen",
-    text: "The kingdom can wait. You always come first.<br><em>Even while the stars sparkle quietly in the night…</em>",
+    title: "Beauty Sleep for My Queen",
+    text: "The kingdom can wait.<br>The world can wait.<br><br>You come first.",
   },
   {
-    title: "Drooling, Apparently 😆",
-    text: "Even queens have their adorable moments 😆",
+    title: "Drooling, Apparently",
+    text: "Even queens have adorable moments.<br><br>Especially mine.",
   },
   {
     title: "Busy Days, Soft Nights",
-    text: "Even when the world is loud, you are my quiet, my calm.",
+    text: "Even when the world is loud…<br>You are my quiet.",
   },
   {
-    title: "Spicy Noodles & Brave Hearts",
-    text: "You handle it all—still irresistibly adorable doing it.",
+    title: "Spicy Noodles & Brave Heart",
+    text: "You face everything with courage.<br><br>And somehow stay cute doing it.<br><br>Unfair, honestly.",
   },
   {
     title: "\"If I Need You to Thank Me Again…",
-    text: "…all I need is a kiss.\"",
+    text: "All I need is a kiss\"<br><br>I replayed that in my head longer than I admit.",
   },
   {
     title: "\"Dear\"",
-    text: "One word. It says everything. Soft, familiar, ours.",
+    text: "One word.<br>Soft.<br>Safe.<br>Ours.",
   },
   {
     title: "I Wish I Could Steal Some Cuddles",
-    text: "Distance may be temporary, but our warmth isn't.<br><em>Follow the stardust… a final sparkle awaits.</em>",
+    text: "Distance is real.<br><br>So is what we feel.<br><br>Guess which one lasts.",
+  },
+
+  // --- Emotional depth ---
+  {
+    title: "When You Call My Name",
+    text: "Hearing my name from you<br>feels different.<br><br>Like it belongs to you now.",
+  },
+  {
+    title: "The Way You Worry",
+    text: "You care deeply.<br><br>About people.<br>About feelings.<br>About me.<br><br>That's rare.<br><br>That's you.",
+  },
+  {
+    title: "The Night I Realized",
+    text: "I didn't tell you.<br><br>But one night…<br>I caught myself smiling at nothing.<br><br>Then I realized.<br><br>It wasn't nothing.<br><br>It was you.",
+  },
+  {
+    title: "The Future I Secretly Imagine",
+    text: "Little moments.<br><br>Morning messages.<br>Shared meals.<br>Quiet nights.<br><br>You in all of them.",
+  },
+  {
+    title: "You Feel Like Home",
+    text: "Not a place.<br><br>A feeling.<br><br>And I found it in you.",
   },
 
   // --- Phantom star / final memory ---
   {
     title: "—",
-    text: "I see you've followed the stars… Now, <strong>close this memory</strong>, and let me show you the last little secret I saved just for you. ❤️",
+    text: "You followed every star.<br>Every memory.<br>Every feeling.<br><br>Now close this memory.<br><br>There's one last thing I saved…<br>just for you. ❤️",
   },
 ];
 
@@ -1391,8 +1414,8 @@ window.addEventListener('touchend', (e) => {
 });
 
 window.addEventListener('mousemove', (e) => {
-  targetX = (e.clientX / window.innerWidth - 0.5) * 2;
-  targetY = (e.clientY / window.innerHeight - 0.5) * 2;
+  targetX = (e.clientX / window.innerWidth - 0.5) * 5;
+  targetY = (e.clientY / window.innerHeight - 0.5) * -5;
   
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
@@ -1444,71 +1467,6 @@ function openMemory(mem) {
     heartShape.bezierCurveTo(6, -4, 0, -6, 0, -10);
     heartShape.bezierCurveTo(0, -6, -6, -4, -6, 0);
     heartShape.bezierCurveTo(-6, 4, -2, 4, 0, 2);
-
-    
-    // // Extrude the heart to give it 3D depth
-    // const heartGeo = new THREE.ExtrudeGeometry(heartShape, {
-    //   depth: 0.4,
-    //   bevelEnabled: true,
-    //   bevelThickness: 0.1,
-    //   bevelSize: 0.1,
-    //   bevelSegments: 3,
-    // });
-    // heartGeo.scale(0.085, 0.08, 0.05);
-    // heartGeo.center();
-    
-    // const heartMat = new THREE.MeshStandardMaterial({
-    //   color: 0xff69b4,
-    //   emissive: 0xff69b4,
-    //   emissiveIntensity: 0.6,   // was 3 → much softer
-    //   roughness: 0.4,
-    //   metalness: 0.1,
-    //   transparent: true,
-    //   opacity: 0.85
-    // });
-
-    // heartbeatAura = new THREE.Mesh(heartGeo, heartMat);
-    // heartbeatAura.position.copy(selectedStar.position);
-    // heartbeatAura.position.z += 0.1; // slightly forward
-    // // heartbeatAura.rotation.x = Math.PI; // flip heart right-side up
-    // scene.add(heartbeatAura);
-
-    // // Heart points
-    // const points = heartShape.getPoints(50);
-    // const geometry = new THREE.BufferGeometry().setFromPoints(points);
-
-    // // Main outline
-    // const mainLineMat = new THREE.LineBasicMaterial({
-    //     color: 0xff69b4,
-    //     linewidth: 2,
-    // });
-    // const heartOutline = new THREE.LineLoop(geometry, mainLineMat);
-
-    // // Glowing halo
-    // const glowLineMat = new THREE.LineBasicMaterial({
-    //     color: 0xff69b4,
-    //     transparent: true,
-    //     opacity: 0.4,
-    // });
-    // const heartGlow = new THREE.LineLoop(geometry, glowLineMat);
-    // heartGlow.scale.set(1.2, 1.2, 1); // slightly bigger for halo
-
-    // // Position & rotation
-    // [heartOutline, heartGlow].forEach(line => {
-    //     line.scale.multiplyScalar(0.08);
-    //     line.position.copy(selectedStar.position);
-    //     line.position.z += 0.15; // in front of star
-    //     scene.add(line);
-    // });
-
-    // // Optional: animate pulse
-    // function pulseHeartOutline() {
-    //     const scale = 0.08 + 0.005 * Math.sin(performance.now() * 0.005);
-    //     heartOutline.scale.set(scale, scale, scale);
-    //     heartGlow.scale.set(scale * 1.2, scale * 1.2, scale);
-    //     requestAnimationFrame(pulseHeartOutline);
-    // }
-    // pulseHeartOutline();
 
     // Use the same heartShape
 const outlineGeo = new THREE.ExtrudeGeometry(heartShape, {
